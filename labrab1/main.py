@@ -29,25 +29,27 @@ INPUT_DATA_MIN_STEP = 0.01
 
 ALPHA = 0.3         # шаг обучения 0 < a < 1
 E_OPTIMAL = 1e-4    # минимальная среднеквадратичная ошибка НС
-THETA = 0           # "theta is some constant" - цитата из вики;
-                    # используется при вычислении выходного значения НС
 
 NN_WIDTH = 5        # количество входных образов (Кол-во входов ИНС)
 
 #   Количество значений функции; для обучения и тестирования
 LEARN_DATA_AMOUNT    = 30   # для обучения
 TEST_DATA_AMOUNT     = 15   # для тестирования
-DATA_AMOUNT          = LEARN_DATA_AMOUNT + TEST_DATA_AMOUNT     # кол-во значений
+DATA_AMOUNT          = LEARN_DATA_AMOUNT + TEST_DATA_AMOUNT     # = 45 - кол-во значений
 
-WEIGHTS_RANGE_LOW    = -0.5  # нижняя  граница для весов
-WEIGHTS_RANGE_TOP    =  0.5  # верхняя граница для весов
+WEIGHTS_RANGE_LOW    = -0.5 # нижняя  граница для весов
+WEIGHTS_RANGE_TOP    =  0.5 # верхняя граница для весов
 WEIGHTS_RANGE_LENGTH = WEIGHTS_RANGE_TOP - WEIGHTS_RANGE_LOW    # длина диапазона
 
 
-input_data  = []    # x's (иксы)
-data_values = []    # y's (игрики)
+input_values    = []    # x's (иксы)
+data_values     = []    # y's (игрики)
+NN_inout_values = []    # значения для входа в НС
 
-weights     = []    # веса НС -0.5 < w < 0.5
+weights         = []    # веса НС -0.5 < w < 0.5
+error_current   = 1.    # текущая ошибка НС
+theta           = 0     # порог НС;
+                        # используется при вычислении выходного значения НС
 
 # подготовка, инициализация данных
 def init_data():
@@ -58,7 +60,7 @@ def init_data():
 
         y = 3 * math.sin( math.sin( 7 * x ) ) + 0.3
 
-        input_data.append(x)
+        input_values.append(x)
         data_values.append(y)
 
         x += INPUT_DATA_MAX_STEP * random() + INPUT_DATA_MIN_STEP
@@ -67,19 +69,93 @@ def init_data():
     print_stage12()
 
 def print_stage12():
-    print("Stage 1&2: data preparing and split:\n")
+    print("\nStage 1&2: data preparing and split:\n")
 
     print("train_data:")
     i = 0
     while i < LEARN_DATA_AMOUNT:
-        print(f"x{i+1} = {input_data[i]}; y{i+1} = {data_values[i]}")
+        print(f"x{i+1} = {input_values[i]}; y{i + 1} = {data_values[i]}")
         i += 1
 
     print("\ntest_data:")
     while i < DATA_AMOUNT:
-        print(f"x{i + 1} = {input_data[i]}; y{i + 1} = {data_values[i]}")
+        print(f"x{i + 1} = {input_values[i]}; y{i + 1} = {data_values[i]}")
         i += 1
 
+
+# создать список входных значений на входные нейроны
+def prepare_data():
+    # для обучения
+    i = 0
+    while i < LEARN_DATA_AMOUNT - NN_WIDTH:
+        in_value = []
+
+        j = i
+        while j < NN_WIDTH + i:
+            in_value.append(data_values[j])
+            j += 1
+
+        NN_inout_values.append([in_value, data_values[NN_WIDTH + i]])
+
+        i += 1
+
+    # и 1 начальный для тестирования
+    in_value = []
+    j = LEARN_DATA_AMOUNT - NN_WIDTH
+    while j < LEARN_DATA_AMOUNT:
+        in_value.append(data_values[j])
+        j += 1
+    NN_inout_values.append([in_value, 0]) # 0 - при тестировании выходное значение заранее не известно
+
+    print_stage3()
+
+def print_stage3():
+    print("\nStage 3: prepare train/test data for NN:\n")
+
+    print("train_data:")
+    i = 0
+    for inout_value in NN_inout_values:
+        in_value = inout_value[0]
+        out_value = inout_value[1]
+
+        inputs = ", ".join(f"y{j+1}({in_value[j-i]})" for j in range(i, i + NN_WIDTH))
+        output = f"y{i + NN_WIDTH + 1}({out_value})"
+
+        if i + NN_WIDTH <= LEARN_DATA_AMOUNT - 1:
+            print(f"{inputs} -> {output}")
+        else:
+            print("\ntest_data (y -> original value, y’ -> model output value):")
+            print(f"{inputs} -> y'{i + NN_WIDTH + 1}")
+
+        i += 1
+
+
+# возвращает y`, найденный с помощью НС
+def get_y_NN(in_value: list) -> float:
+    w_sum = 0.
+
+    i = 0
+    while i < NN_WIDTH:
+        w_sum += weights[i] * in_value[i]
+        i += 1
+
+    return w_sum - theta
+
+# возвращает ошибку
+# @param y - значение НС
+# @param e - эталонное значение
+def get_error(y, e) -> float:
+    return 0.5 * ((y - e)**2)
+
+# изменяет веса и порог НС
+def mutate_weights(y, e, in_values: list):
+    i = 0
+    while i < NN_WIDTH:
+        weights[i] = weights[i] - ALPHA * (y - e) * in_values[i]
+        i += 1
+
+    global theta
+    theta = theta - ALPHA * (y - e)
 
 # подготовить начальные значения для весов
 def init_weights():
@@ -89,11 +165,73 @@ def init_weights():
         weights.append(weight)
         i += 1
 
+    global theta
+    theta = random() * WEIGHTS_RANGE_LENGTH + WEIGHTS_RANGE_LOW
+
+# запустить тренировку (и тестирование) НС
+def train():
+    print("\nStage 4: train & test model")
+
+    init_weights()
+    global error_current
+
+    generation_counter = 1
+
+    while error_current > E_OPTIMAL:
+        print(f"\nGeneration №{generation_counter}")
+        error_current = 0.
+
+        i = 0
+        while i < DATA_AMOUNT:
+            inout_value = NN_inout_values[i]
+            in_value = inout_value[0]
+            out_value = inout_value[1]
+
+            y = get_y_NN(in_value)
+
+            if i + NN_WIDTH <= LEARN_DATA_AMOUNT - 1:
+                # тренировка
+                mutate_weights(y, out_value, in_value)
+            else:
+                # тестирование
+                out_value = y
+
+                j = 1
+                new_in_value = []
+                while j < NN_WIDTH:
+                    new_in_value.append(in_value[j])
+                    if j+1 == NN_WIDTH:
+                        new_in_value.append(y)
+                    j += 1
+
+                NN_inout_values.append([new_in_value, 0])
+
+            error = get_error(y, out_value)
+            error_current += error
+
+            i += 1
+
+        print(f"test_loss: {error_current}")
+        if error_current > E_OPTIMAL:
+            print(f"test_loss > {E_OPTIMAL} -> continue training")
+        else:
+            print(f"test_loss < {E_OPTIMAL} -> stop training")
+
+        generation_counter += 1
+
+
+# тестировать НС
+def print_stage5():
+    print("test")
 
 def main():
     init_data()
-    init_weights()
-    # TODO: stage 3-5
+    prepare_data()
+
+    # TODO: stage 4-5
+    train()
+
+    print_stage5()
 
 
 if __name__ == '__main__':
