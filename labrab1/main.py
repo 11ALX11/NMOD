@@ -27,8 +27,8 @@ INPUT_DATA_MIN_STEP = 0.02
 #   x5 --> () w5 --/
 
 
-ALPHA = 0.00005     # шаг обучения 0 < a < 1
-E_OPTIMAL = 20.     # минимальная среднеквадратичная ошибка НС
+ALPHA = 0.01     # шаг обучения 0 < a < 1
+E_OPTIMAL = 1e-4    # минимальная среднеквадратичная ошибка НС
 
 NN_WIDTH = 5        # количество входных образов (Кол-во входов ИНС)
 
@@ -166,7 +166,7 @@ def mutate_weights(y, e, in_values: list):
         i += 1
 
     global theta
-    theta = clamp(theta - ALPHA * (y - e),
+    theta = clamp(theta + ALPHA * (y - e),
                            WEIGHTS_RANGE_LOW,
                            WEIGHTS_RANGE_TOP)
 
@@ -191,6 +191,7 @@ def train():
     generation_counter = 1
 
     while error_current > E_OPTIMAL:
+        if generation_counter > 100: break # TODO: debug cleanup
         print(f"\nGeneration №{generation_counter}")
         old_weights_debug = weights.copy()
         error_current = 0.
@@ -209,7 +210,9 @@ def train():
 
             if i + NN_WIDTH < LEARN_DATA_AMOUNT:
                 # тренировка
+                #print(f"{i} - {get_error(y, out_value)}")  # TODO: debug cleanup
                 mutate_weights(y, out_value, in_value)
+                #print(f"{i} - {get_error(get_y_NN(in_value), out_value)}")  # TODO: debug cleanup
             else:
                 # тестирование
                 j = 1
@@ -239,14 +242,41 @@ def train():
             print(f"test_loss < {E_OPTIMAL} -> stop training")
 
 
-        print(f"old_weights {old_weights_debug} -> \nnew_weights {weights}") # TODO: debug cleanup
+        #print(f"old_weights {old_weights_debug} -> \nnew_weights {weights}") # TODO: debug cleanup
 
         generation_counter += 1
 
 
-# тестировать НС
+# вывести предсказания модели для лучшей эпохи
 def print_stage5():
-    print("test")
+    print("\nStage 5: print full model outputs for best epoch\n")
+
+    inout_values = NN_inout_values.copy()
+
+    i = LEARN_DATA_AMOUNT - NN_WIDTH
+    while i < DATA_AMOUNT - NN_WIDTH:
+        inout_value = inout_values[i]
+        in_value = inout_value[0]
+
+        y = get_y_NN(in_value)
+
+        inputs = ", ".join(f"y{j + 1}({in_value[j - i]})" for j in range(i, i + NN_WIDTH))
+        output = f"y{i + NN_WIDTH + 1}({y})"
+        print(f"{inputs} -> y'{i + NN_WIDTH + 1}({y})")
+
+        j = 1
+        new_in_value = []
+        while j < NN_WIDTH:
+            new_in_value.append(in_value[j])
+            if j + 1 == NN_WIDTH:
+                new_in_value.append(y)
+            j += 1
+
+        inout_values.append([new_in_value, 0])
+
+        i += 1
+
+    #print(f"y45 = {data_values[44]}")# TODO: debug cleanup
 
 def main():
     init_data()
