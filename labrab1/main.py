@@ -1,5 +1,6 @@
 import math
 from random import random
+import matplotlib.pyplot as plt
 
 
 # Вариант №3
@@ -15,9 +16,9 @@ from random import random
 
 #   т.е. имеем:
 #   y = 3 * sin( sin( 7 * x ) ) + 0.3
-#   Период функции = (2*Pi)/7 = 0.8975979010256552
-INPUT_DATA_MAX_STEP = 0.07
-INPUT_DATA_MIN_STEP = 0.02
+#   Период функции = (2*Pi)/7 = 0,8975979010256552
+INPUT_DATA_MAX_STEP = 0.
+INPUT_DATA_MIN_STEP = 0.018
 
 #   Графическая интерпретация НС на 5 входов
 #   x1 --> () w1 --\
@@ -27,18 +28,18 @@ INPUT_DATA_MIN_STEP = 0.02
 #   x5 --> () w5 --/
 
 
-ALPHA = 0.01     # шаг обучения 0 < a < 1
+ALPHA = 0.004       # шаг обучения 0 < a < 1
 E_OPTIMAL = 1e-4    # минимальная среднеквадратичная ошибка НС
 
 NN_WIDTH = 5        # количество входных образов (Кол-во входов ИНС)
 
 #   Количество значений функции; для обучения и тестирования
-LEARN_DATA_AMOUNT    = 30   # для обучения
-TEST_DATA_AMOUNT     = 15   # для тестирования
+LEARN_DATA_AMOUNT    = 50   # для обучения
+TEST_DATA_AMOUNT     = 25   # для тестирования
 DATA_AMOUNT          = LEARN_DATA_AMOUNT + TEST_DATA_AMOUNT     # = 45 - кол-во значений
 
-WEIGHTS_RANGE_LOW    = -0.5 # нижняя  граница для весов
-WEIGHTS_RANGE_TOP    =  0.5 # верхняя граница для весов
+WEIGHTS_RANGE_LOW    = -1 # нижняя  граница для весов
+WEIGHTS_RANGE_TOP    =  1 # верхняя граница для весов
 WEIGHTS_RANGE_LENGTH = WEIGHTS_RANGE_TOP - WEIGHTS_RANGE_LOW    # длина диапазона
 
 
@@ -188,12 +189,13 @@ def train():
     init_weights()
     global error_current
 
+    last_train_loss = 1000.
     generation_counter = 1
 
     while error_current > E_OPTIMAL:
-        if generation_counter > 100: break # TODO: debug cleanup
+        if generation_counter > 500: break # TODO: debug cleanup
         print(f"\nGeneration №{generation_counter}")
-        old_weights_debug = weights.copy()
+        old_weights_debug = weights.copy() # TODO: debug cleanup
         error_current = 0.
         train_loss = 0
         inout_values = NN_inout_values.copy()
@@ -213,6 +215,7 @@ def train():
                 #print(f"{i} - {get_error(y, out_value)}")  # TODO: debug cleanup
                 mutate_weights(y, out_value, in_value)
                 #print(f"{i} - {get_error(get_y_NN(in_value), out_value)}")  # TODO: debug cleanup
+                y = get_y_NN(in_value)
             else:
                 # тестирование
                 j = 1
@@ -230,20 +233,24 @@ def train():
             error = get_error(y, out_value)
             error_current += error
 
-            if i + NN_WIDTH - 1 == LEARN_DATA_AMOUNT:
+            if i + NN_WIDTH + 1 == LEARN_DATA_AMOUNT:
                 train_loss = error_current
 
             i += 1
 
         print(f"train_loss: {train_loss}\ttest_loss: {error_current}")
         if error_current > E_OPTIMAL:
-            print(f"test_loss > {E_OPTIMAL} -> continue training")
+            if (last_train_loss < train_loss) and (generation_counter > 5):
+                print(f"train_loss > last_train_loss -> stop training")
+                break
+            else:
+                print(f"test_loss > {E_OPTIMAL} -> continue training")
         else:
             print(f"test_loss < {E_OPTIMAL} -> stop training")
 
-
         #print(f"old_weights {old_weights_debug} -> \nnew_weights {weights}") # TODO: debug cleanup
 
+        last_train_loss = train_loss
         generation_counter += 1
 
 
@@ -278,14 +285,40 @@ def print_stage5():
 
     #print(f"y45 = {data_values[44]}")# TODO: debug cleanup
 
+
+# выводит графики данных для сравнения
+def plot_func():
+    plt.figure()
+    plt.subplot(211)
+    plt.plot(input_values, data_values)
+
+    NN_data_predictions = []
+    i = 0
+    while i < NN_WIDTH:
+        NN_data_predictions.append(data_values[i])
+        i += 1
+
+    while i < DATA_AMOUNT:
+        in_value = NN_data_predictions[-NN_WIDTH:]  # последние NN_WIDTH значений
+        y = get_y_NN(in_value)
+        NN_data_predictions.append(y)
+        i += 1
+
+    plt.subplot(212)
+    plt.plot(input_values, NN_data_predictions)
+
+    plt.show()
+
 def main():
     init_data()
-    prepare_data()
 
-    # TODO: stage 4-5
+    prepare_data()
+    # TODO: stage 4
     train()
 
     print_stage5()
+
+    plot_func()
 
 
 if __name__ == '__main__':
