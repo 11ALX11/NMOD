@@ -153,7 +153,7 @@ def get_y_NN(in_value: list) -> float:
 # возвращает ошибку
 # @param y - значение НС
 # @param e - эталонное значение
-def get_error(y, e) -> float: return 0.5 * ((y - e) ** 2)
+def get_error(y, e) -> float: return 0.5 * (abs(y - e) ** 2)
 
 # изменяет веса и порог НС
 # @param y - значение НС
