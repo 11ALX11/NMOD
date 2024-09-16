@@ -17,8 +17,8 @@ import matplotlib.pyplot as plt
 #   т.е. имеем:
 #   y = 3 * sin( sin( 7 * x ) ) + 0.3
 #   Период функции = (2*Pi)/7 = 0,8975979010256552
-INPUT_DATA_MAX_STEP = 0.
-INPUT_DATA_MIN_STEP = 0.018
+INPUT_DATA_MAX_STEP = 0.007
+INPUT_DATA_MIN_STEP = 0.015
 
 #   Графическая интерпретация НС на 5 входов
 #   x1 --> () w1 --\
@@ -28,7 +28,7 @@ INPUT_DATA_MIN_STEP = 0.018
 #   x5 --> () w5 --/
 
 
-ALPHA = 0.004       # шаг обучения 0 < a < 1
+ALPHA = 0.003       # шаг обучения 0 < a < 1
 E_OPTIMAL = 1e-4    # минимальная среднеквадратичная ошибка НС
 
 NN_WIDTH = 5        # количество входных образов (Кол-во входов ИНС)
@@ -190,6 +190,7 @@ def train():
     global error_current
 
     last_train_loss = 1000.
+    last_test_loss = 1000.
     generation_counter = 1
 
     while error_current > E_OPTIMAL:
@@ -240,7 +241,7 @@ def train():
 
         print(f"train_loss: {train_loss}\ttest_loss: {error_current}")
         if error_current > E_OPTIMAL:
-            if (last_train_loss < train_loss) and (generation_counter > 5):
+            if (last_train_loss < train_loss) and (last_test_loss < error_current) and (generation_counter > 5):
                 print(f"train_loss > last_train_loss -> stop training")
                 break
             else:
@@ -251,6 +252,7 @@ def train():
         #print(f"old_weights {old_weights_debug} -> \nnew_weights {weights}") # TODO: debug cleanup
 
         last_train_loss = train_loss
+        last_test_loss = error_current
         generation_counter += 1
 
 
@@ -308,6 +310,7 @@ def plot_func():
     plt.plot(input_values, NN_data_predictions)
 
     plt.show()
+
 
 def main():
     init_data()
