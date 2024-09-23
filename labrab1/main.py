@@ -229,6 +229,8 @@ def train():
 def print_stage5():
     print("\nStage 5: print full model outputs for best epoch\n")
 
+    error_current = 0 # TODO: debug recount error
+
     NN_data_predictions = []
     i = LEARN_DATA_AMOUNT - NN_WIDTH
     while i < LEARN_DATA_AMOUNT:
@@ -238,15 +240,22 @@ def print_stage5():
     while i < DATA_AMOUNT:
         in_value = NN_data_predictions[-NN_WIDTH:]  # последние NN_WIDTH значений
         y = get_y_NN(in_value)
+
+        error_current += get_error(y, data_values[i]) # TODO: debug recount error
+
         NN_data_predictions.append(y)
 
         inputs = (", ".join(f"y{"'" if i + j - NN_WIDTH + 1 > LEARN_DATA_AMOUNT else ""}"
                             f"{i + j - NN_WIDTH + 1}"
                             f"({in_value[j]})"
                             for j in range(0, NN_WIDTH)))
-        print(f"{inputs} -> y'{i + 1}({y})")
+        print(f"{inputs} -> y'{i + 1}({y})"
+              f" | (diff: {data_values[i] - y}, err: {get_error(y, data_values[i])}), err_accum: {error_current}"  #TODO: debug recount error
+              )
 
         i += 1
+
+    print(f"test_loss recounted: {error_current}") # TODO: debug recount error
 
 
 # выводит графики данных для сравнения
