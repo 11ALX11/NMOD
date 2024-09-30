@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 
 #   Функция для тестирования:
-#   y = a * sin( sin( b * x ) ) + d
+#   y = a * sin( b * x ) + d
 
 #   |-----------------------------------|
 #   |   a   b    d   Кол-во входов ИНС  |
@@ -15,10 +15,9 @@ import matplotlib.pyplot as plt
 #   |-----------------------------------|
 
 #   т.е. имеем:
-#   y = 3 * sin( sin( 7 * x ) ) + 0.3
+#   y = 3 * sin( 7 * x ) + 0.3
 #   Период функции = (2*Pi)/7 = 0,8975979010256552
-INPUT_DATA_MAX_STEP = 0.007
-INPUT_DATA_MIN_STEP = 0.015
+INPUT_DATA_MIN_STEP = 0.020
 
 #   Графическая интерпретация НС на 5 входов
 #   x1 --> () w1 --\
@@ -28,7 +27,7 @@ INPUT_DATA_MIN_STEP = 0.015
 #   x5 --> () w5 --/
 
 
-ALPHA = 0.001       # шаг обучения 0 < a < 1
+ALPHA = 0.06       # шаг обучения 0 < a < 1
 E_OPTIMAL = 1e-4    # минимальная среднеквадратичная ошибка НС
 
 NN_WIDTH = 5        # количество входных образов (Кол-во входов ИНС)
@@ -62,12 +61,12 @@ def init_data():
 
     while i < DATA_AMOUNT:
 
-        y = 3 * math.sin( math.sin( 7 * x ) ) + 0.3
+        y = 3 * math.sin( 7 * x ) + 0.3
 
         input_values.append(x)
         data_values.append(y)
 
-        x += INPUT_DATA_MAX_STEP * random() + INPUT_DATA_MIN_STEP
+        x += INPUT_DATA_MIN_STEP
         i += 1
 
     print_stage12()
@@ -117,16 +116,13 @@ def print_stage3():
 # возвращает y`, найденный с помощью НС
 def get_y_NN(in_value: list) -> float:
     w_sum = 0.
-    #print() # TODO: debug cleanup
 
     i = 0
     while i < NN_WIDTH:
         w_sum += weights[i] * in_value[i]
 
-        #print(f"w_sum = {w_sum}, w{i+1} = {weights[i]}, x = {in_value[i]}")# TODO: debug cleanup
         i += 1
 
-    #print(f"theta = {theta}")# TODO: debug cleanup
     return w_sum - theta
 
 # возвращает ошибку
@@ -173,7 +169,6 @@ def train():
     generation_counter = 1
 
     while error_current > E_OPTIMAL:
-        if generation_counter > 500: break # TODO: debug cleanup
         print(f"\nGeneration №{generation_counter}")
         error_current = 0.
         train_loss = 0
@@ -211,12 +206,7 @@ def train():
 
         print(f"train_loss: {train_loss}\ttest_loss: {error_current}")
         if error_current > E_OPTIMAL:
-            if (last_train_loss < train_loss) and (last_test_loss < error_current) and (generation_counter > 5):
-            #if (last_test_loss < error_current) and (generation_counter > 5):
-                print(f"train_loss > last_train_loss -> stop training")
-                break
-            else:
-                print(f"test_loss > {E_OPTIMAL} -> continue training")
+            print(f"test_loss > {E_OPTIMAL} -> continue training")
         else:
             print(f"test_loss < {E_OPTIMAL} -> stop training")
 
@@ -229,8 +219,6 @@ def train():
 def print_stage5():
     print("\nStage 5: print full model outputs for best epoch\n")
 
-    error_current = 0 # TODO: debug recount error
-
     NN_data_predictions = []
     i = LEARN_DATA_AMOUNT - NN_WIDTH
     while i < LEARN_DATA_AMOUNT:
@@ -241,21 +229,15 @@ def print_stage5():
         in_value = NN_data_predictions[-NN_WIDTH:]  # последние NN_WIDTH значений
         y = get_y_NN(in_value)
 
-        error_current += get_error(y, data_values[i]) # TODO: debug recount error
-
         NN_data_predictions.append(y)
 
         inputs = (", ".join(f"y{"'" if i + j - NN_WIDTH + 1 > LEARN_DATA_AMOUNT else ""}"
                             f"{i + j - NN_WIDTH + 1}"
                             f"({in_value[j]})"
                             for j in range(0, NN_WIDTH)))
-        print(f"{inputs} -> y'{i + 1}({y})"
-              f" | (diff: {data_values[i] - y}, err: {get_error(y, data_values[i])}), err_accum: {error_current}"  #TODO: debug recount error
-              )
+        print(f"{inputs} -> y'{i + 1}({y})")
 
         i += 1
-
-    print(f"test_loss recounted: {error_current}") # TODO: debug recount error
 
 
 # выводит графики данных для сравнения
