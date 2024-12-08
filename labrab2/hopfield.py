@@ -12,12 +12,15 @@ import random
 # | 8  | 1 | 1 | 1 | 0 | 0 | 0 | 1 | 1 | 1 | 0 | 0 | 0 | 1 | 1 | 1 | 0 | 0 | 0 | 1 | 1 |
 # | 11 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
 
+
 Y1 = np.array([0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0])
 Y2 = np.array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0])
 Y3 = np.array([1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1])
 Y4 = np.array([0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0])
 
 Y = np.array([Y1, Y2, Y3 ,Y4])
+
+max_nn_algorithm_iteration = 10
 
 
 def sign(x):
@@ -35,18 +38,78 @@ def copy_noisy(array, bits_count: int) -> list:
     return y_noisy
 
 
+def async_method(y_noisy, W, y_original):
+    y_noisy = y_noisy.copy()
+    print(f"y_original = {y_original}")
+    print(f"y_noisy    = {y_noisy}")
+    for i in range(max_nn_algorithm_iteration):
+        y_in = y_noisy.copy()
+        print(f"\nStage {i+1}:")
+        for j in range(len(y_noisy)):
+            s_j = np.dot(y_noisy, W[:, j])
+            y_noisy[j] = sign(s_j)
+            print(f"y_model({j+1:02}) = [{" ".join(f" {x} " if i != j else f"({x})" for i, x in enumerate(y_noisy))}]")
+        if np.array_equal(y_in, y_noisy):
+            if np.array_equal(y_in, y_original):
+                print(f"y_stage_{i+1} == y_original, relaxation with correct value")
+                return True
+            else:
+                print(f"y_stage_{i+1} == y_stage_{i} != y_original, relaxation with wrong value")
+                return False
+        else:
+            print(f"y_stage{i+1} != y_stage{i}, continue calculation")
+    print(f"model can’t find relaxation, max iteration = {max_nn_algorithm_iteration}")
+    return False
+
+def sync_method(y_noisy, W, y_original):
+    y_noisy = y_noisy.copy()
+    print(f"y_original = {y_original}")
+    print(f"y_noisy    = {y_noisy}")
+    y_out = y_noisy.copy()
+    for i in range(max_nn_algorithm_iteration):
+        print(f"\nStage {i+1}:")
+        y_in = y_out
+        s = np.dot(y_in, W)
+        y_out = sign(s)
+        print(f"y_model({i+1}) = {y_out}")
+        if np.array_equal(y_out, y_in):
+            if np.array_equal(y_out, y_original):
+                print(f"y_stage_{i + 1} == y_original, relaxation with correct value")
+                return True
+            else:
+                print(f"y_stage_{i + 1} == y_stage_{i} != y_original, relaxation with wrong value")
+                return False
+        else:
+            print(f"y_stage{i + 1} != y_stage_{i}, continue calculation")
+            print(f"model can’t find relaxation, max iteration = {max_nn_algorithm_iteration}")
+    return False
+
+
 def main():
     print("Сеть Хопфилда:")
 
+    print("\nSource vectors:")
+    for y_idx, y_original in enumerate(Y):
+        print(f"y{y_idx + 1} = {y_original}")
+
     W = np.dot(np.matrix.transpose(Y * 2 - 1), (Y * 2 - 1)) - np.identity(Y1.size)
 
-    Y1Mod = copy_noisy(Y1, 1)
+    y1_noisy = copy_noisy(Y1, 1)
 
-    y1 = sign(np.dot(Y1Mod, W[:][0]))
-    y2 = sign(np.dot(Y1Mod, W[:][1]))
-    y3 = sign(np.dot(Y1Mod, W[:][2]))
-    y4 = sign(np.dot(Y1Mod, W[:][3]))
+    print(f"\n\tAsync example for y1:")
+    async_method(y1_noisy, W, Y1)
 
+    print(f"\n\tSync example for y1:")
+    sync_method(y1_noisy, W, Y1)
+
+    # for y_idx, y_original in enumerate(Y):
+    #     y_noisy = copy_noisy(y_original, 1)
+    #
+    #     print(f"\n\tAsync y{y_idx + 1}:")
+    #     async_method(y_noisy, W, y_original)
+    #
+    #     print(f"\n\tSync y{y_idx + 1}:")
+    #     sync_method(y_noisy, W, y_original)
 
 if __name__ == '__main__':
     main()
