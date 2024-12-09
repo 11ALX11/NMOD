@@ -1,7 +1,6 @@
 import math
 import matplotlib.pyplot as plt
 
-
 # Вариант №2
 
 
@@ -11,7 +10,7 @@ import matplotlib.pyplot as plt
 INPUT_DATA_MIN_STEP = 0.10
 
 
-ALPHA = 0.1       # шаг обучения 0 < a < 1
+ALPHA = 0.005       # шаг обучения 0 < a < 1
 E_OPTIMAL = 1e-4    # минимальная среднеквадратичная ошибка НС
 
 NN_WIDTH = 5        # количество входных образов (Кол-во входов ИНС)
@@ -31,7 +30,9 @@ theta1          = []    # порог
 weights2        = []    # v промежуточный -> выходной
 theta2          = 0     # порог
 weights3        = []    # контекстный -> промежуточный
-last_y          = 0
+weights4        = []    # w1i выходной -> промежуточный
+last_y          = 0     # y(t-1)
+last_p          = []    # p[i](t-1)
 
 error_current   = E_OPTIMAL + 1     # текущая ошибка НС
 
@@ -109,7 +110,7 @@ def get_y_NN(in_value: list) -> float:
         wx_sum = 0
         k = 0
         while k < NN_WIDTH:
-            wx_sum = weights1[k][i] * in_value[k]
+            wx_sum += weights1[k][i] * in_value[k]
             k += 1
 
         p.append(math.tanh(wx_sum + weights3[i] * last_y - theta1[i]))
@@ -133,31 +134,36 @@ def get_error(y, e) -> float: return 0.5 * (abs(y - e) ** 2)
 # @param y - значение НС
 # @param e - эталонное значение
 def mutate_weights(y, e, in_values: list):
-    p = []
-    fs = []
-
     i = 0
     while i < NN_WIDTH:
         wx_sum = 0
+        wp_sum = 0
+        wy_sum = 0
+
         k = 0
         while k < NN_WIDTH:
-            wx_sum = weights1[k][i] * in_values[k]
+            wx_sum += weights1[k][i] * in_values[k]
+            wp_sum += weights3[k] * last_p[i]
+            wy_sum += weights4[k] * last_y
             k += 1
 
-        p.append(math.tanh(wx_sum + weights3[i] * last_y - theta1[i]))
+        p = math.tanh(wx_sum + wp_sum + wy_sum - theta1[i])
 
-        fs.append(1 - p[i] ** 2)
+        fs = 1 - p ** 2
 
-        weights2[i] = weights2[i] - ALPHA * (y - e) * p[i]
+        weights2[i] = weights2[i] - ALPHA * (y - e) * p
         gamma = (y - e) * weights2[i]
 
         k = 0
         while k < NN_WIDTH:
-            weights1[k][i] = weights1[k][i] - ALPHA * gamma * fs[i] * in_values[i]
+            weights1[k][i] = weights1[k][i] - ALPHA * gamma * fs * in_values[i]
             k += 1
 
-        weights3[i] = weights3[i] - ALPHA * gamma * fs[i] * p[i]
-        theta1[i] = theta1[i] + ALPHA * gamma * fs[i]
+        weights3[i] = weights3[i] - ALPHA * gamma * fs * last_p[i]
+        weights4[i] = weights4[i] - ALPHA * gamma * fs * last_y
+        theta1[i] = theta1[i] + ALPHA * gamma * fs
+
+        last_p[i] = p
 
         i += 1
 
@@ -172,6 +178,9 @@ def init_weights():
         theta1.append(0.1)
         weights2.append(0.1)
         weights3.append(0.1)
+        weights4.append(0.1)
+
+        last_p.append(0)
 
         i += 1
 
@@ -235,7 +244,7 @@ def train():
         last_test_loss = error_current
         generation_counter += 1
 
-        if generation_counter > 50:
+        if generation_counter > 100:
             break
 
 
@@ -244,6 +253,8 @@ def print_stage5():
     print("\nStage 5: print full model outputs for best epoch\n")
 
     NN_data_predictions = []
+    global last_y
+    last_y = 0
     i = LEARN_DATA_AMOUNT - NN_WIDTH
     while i < LEARN_DATA_AMOUNT:
         NN_data_predictions.append(data_values[i])
