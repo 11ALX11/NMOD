@@ -1,6 +1,3 @@
-import numpy as np
-import random
-
 # Вариант №2
 # | n   |	m	| № векторов |
 # | --- | ----- | ---------- |
@@ -12,104 +9,281 @@ import random
 # | 8  | 1 | 1 | 1 | 0 | 0 | 0 | 1 | 1 | 1 | 0 | 0 | 0 | 1 | 1 | 1 | 0 | 0 | 0 | 1 | 1 |
 # | 11 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
 
+import copy
 
-Y1 = np.array([0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0])
-Y2 = np.array([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0])
-Y3 = np.array([1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1])
-Y4 = np.array([0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0])
+#Hopfield Utils
+asyncMethod = 1
+syncMethod = 2
 
-Y = np.array([Y1, Y2, Y3 ,Y4])
+#Bidirectional Associative Memory Utils
+startWithY = 1
+startWithX = 2
 
-max_nn_algorithm_iteration = 10
+#Matrix Utils
+add = 1
+substract = 2
+multiply = 3
+divide = 4
+
+#Printing Utils
+counter = 0
+isPrintingAvailable = True
+
+def matrixAndNumberOperation(matrixA, number, operation):
+    if(operation == add):
+        matrix = [0] * len(matrixA)
+        for i in range(len(matrixA)):
+            matrix[i] = [0] * len(matrixA[i])
+            for j in range(len(matrixA[i])):
+                matrix[i][j] = matrixA[i][j] + number
+        return matrix
+    elif(operation == substract):
+        matrix = [0] * len(matrixA)
+        for i in range(len(matrixA)):
+            matrix[i] = [0] * len(matrixA[i])
+            for j in range(len(matrixA[i])):
+                matrix[i][j] = matrixA[i][j] - number
+        return matrix
+    elif(operation == multiply):
+        matrix = [0] * len(matrixA)
+        for i in range(len(matrixA)):
+            matrix[i] = [0] * len(matrixA[i])
+            for j in range(len(matrixA[i])):
+                matrix[i][j] =  matrixA[i][j] * number
+        return matrix
+    elif(operation == divide):
+        matrix = [0] * len(matrixA)
+        for i in range(len(matrixA)):
+            matrix[i] = [0] * len(matrixA[i])
+            for j in range(len(matrixA[i])):
+                matrix[i][j] = matrixA[i][j] / number
+        return matrix
+    return None
+
+def matrixAndMatrixOperation(matrixA, matrixB, operation):
+    if(operation == add):
+        if(len(matrixA) != len(matrixB) or len(matrixA[0]) != len(matrixB[0])):
+            return None
+        matrix = [0] * len(matrixA)
+        for i in range(len(matrixA)):
+            matrix[i] = [0] * len(matrixA[i])
+            for j in range(len(matrixA[i])):
+                matrix[i][j] = matrixA[i][j] + matrixB[i][j]
+        return matrix
+    elif(operation == substract):
+        if(len(matrixA) != len(matrixB) or len(matrixA[0]) != len(matrixB[0])):
+            return None
+        matrix = [0] * len(matrixA)
+        for i in range(len(matrixA)):
+            matrix[i] = [0] * len(matrixA[i])
+            for j in range(len(matrixA[i])):
+                matrix[i][j] -= matrixB[i][j]
+        return matrix
+    elif(operation == multiply):
+        if(len(matrixA[0]) != len(matrixB)):
+            return None
+        matrix = [0] * len(matrixA)
+        for i in range(len(matrixA)):
+            matrix[i] = [0] * len(matrixB[0])
+            for j in range(len(matrixB[0])):
+                for k in range(len(matrixA[0])):
+                    matrix[i][j] += matrixA[i][k] * matrixB[k][j]
+        return matrix
+    return None
+
+def transposeMatrix(matrixA):
+    matrix = [0] * len(matrixA[0])
+    for i in range(len(matrix)):
+        matrix[i] = [0] * len(matrixA)
+        for j in range(len(matrix[i])):
+            matrix[i][j] = matrixA[j][i]
+    return matrix
+
+def addNoise(noisedVariant, bit):
+    for i in range(bit):
+        noisedVariant[i] = 1 if noisedVariant[i] == 0 else 0
+    return noisedVariant
 
 
-def sign(x):
-    if isinstance(x, (list, np.ndarray)):
-        return np.array([1 if el > 0 else 0 for el in x])
-    elif isinstance(x, (int, float)):
-        return 1 if x > 0 else 0
+#Сеть Хопфилда:
+def initWeightsHopfield(INPUT_VALUES):
+    # Инициализация весовых коэффициентов (2Y - 1)^T * (2Y - 1) - I
+    weights = copy.deepcopy(INPUT_VALUES)
+    weights = matrixAndNumberOperation(weights, 2, multiply)
+    weights = matrixAndNumberOperation(weights, 1, substract)
+    weights = matrixAndMatrixOperation(transposeMatrix(weights), weights, multiply)
 
+    for i in range(len(weights)):
+        weights[i][i] -= 1
 
-def copy_noisy(array, bits_count: int) -> list:
-    noisy_positions = random.sample(range(len(array)), bits_count)
-    y_noisy = array.copy()
-    for i in noisy_positions:
-        y_noisy[i] = y_noisy[i] ^ 1
-    return y_noisy
+    return weights
 
+def falseSign(number):
+    return 1 if number > 0 else 0
 
-def async_method(y_noisy, W, y_original):
-    y_noisy = y_noisy.copy()
-    print(f"y_original = {y_original}")
-    print(f"y_noisy    = {y_noisy}")
-    for i in range(max_nn_algorithm_iteration):
-        y_in = y_noisy.copy()
-        print(f"\nStage {i+1}:")
-        for j in range(len(y_noisy)):
-            s_j = np.dot(y_noisy, W[:, j])
-            y_noisy[j] = sign(s_j)
-            print(f"y_model({j+1:02}) = [{" ".join(f" {x} " if i != j else f"({x})" for i, x in enumerate(y_noisy))}]")
-        if np.array_equal(y_in, y_noisy):
-            if np.array_equal(y_in, y_original):
-                print(f"y_stage_{i+1} == y_original, relaxation with correct value")
-                return True
-            else:
-                print(f"y_stage_{i+1} == y_stage_{i} != y_original, relaxation with wrong value")
-                return False
-        else:
-            print(f"y_stage{i+1} != y_stage{i}, continue calculation")
-    print(f"model can’t find relaxation, max iteration = {max_nn_algorithm_iteration}")
+def asyncMethod(variant, noisedVariant, variantWeight):
+    global counter, isPrintingAvailable
+    numberOfTries = 0
+
+    if(isPrintingAvailable):
+        print(f"\ty{counter + 1}_original = {variant}\n\ty{counter + 1}_noised   = {noisedVariant}\n")
+
+    while(numberOfTries < 10):
+        previousVariant = noisedVariant[:]
+
+        if(isPrintingAvailable):
+            print(f"\tStage {numberOfTries + 1}:")
+
+        for i in range(len(variantWeight)):
+            sum = 0
+            for j in range(len(variantWeight[i])):
+                sum += noisedVariant[j] * variantWeight[j][i]
+
+            noisedVariant[i] = falseSign(sum)
+            if(isPrintingAvailable):
+                str = f"["
+                isBracketSet = False
+                for k in range(len(noisedVariant) - 1):
+                    if(k == i):
+                        str += f"({noisedVariant[k]}), "
+                        isBracketSet = True
+                    else:
+                        str += f"{noisedVariant[k]}, "
+
+                if(not isBracketSet):
+                    str += f"({noisedVariant[k]})]"
+                else:
+                    str += f"{noisedVariant[k]}]"
+
+                print(f"\ty{counter + 1}_model ({i + 1}) = {str}")
+
+        if(noisedVariant == previousVariant):
+            if(isPrintingAvailable):
+                print(f"\ty{counter + 1}_stage_{numberOfTries + 1} == y_previous -> relaxation, incorrect\n")
+            return False
+
+        if(noisedVariant != variant):
+            numberOfTries += 1
+            continue
+
+        if(isPrintingAvailable):
+            print(f"\ty{counter + 1}_stage_{numberOfTries + 1} == y_original -> relaxation, correct\n")
+        return True
+
+    if(isPrintingAvailable):
+        print(f"\ty{counter + 1}_stage_{numberOfTries + 1} != y_original -> incorrect\n")
     return False
 
-def sync_method(y_noisy, W, y_original):
-    y_noisy = y_noisy.copy()
-    print(f"y_original = {y_original}")
-    print(f"y_noisy    = {y_noisy}")
-    y_out = y_noisy.copy()
-    for i in range(max_nn_algorithm_iteration):
-        print(f"\nStage {i+1}:")
-        y_in = y_out
-        s = np.dot(y_in, W)
-        y_out = sign(s)
-        print(f"y_model({i+1}) = {y_out}")
-        if np.array_equal(y_out, y_in):
-            if np.array_equal(y_out, y_original):
-                print(f"y_stage_{i + 1} == y_original, relaxation with correct value")
-                return True
-            else:
-                print(f"y_stage_{i + 1} == y_stage_{i} != y_original, relaxation with wrong value")
-                return False
-        else:
-            print(f"y_stage{i + 1} != y_stage_{i}, continue calculation")
-            print(f"model can’t find relaxation, max iteration = {max_nn_algorithm_iteration}")
+def syncMethod(variant, noisedVariant, variantWeight):
+    global counter, isPrintingAvailable
+    numberOfTries = 0
+
+    if(isPrintingAvailable):
+        print(f"\ty{counter + 1}_original = {variant}\n\ty{counter + 1}_noised   = {noisedVariant}\n")
+
+    while (numberOfTries < 10):
+        previousVariant = noisedVariant[:]
+        noisedVariant = matrixAndMatrixOperation([noisedVariant], variantWeight, multiply)[0]
+
+        for i in range(len(variantWeight)):
+            noisedVariant[i] = falseSign(noisedVariant[i])
+
+        if(isPrintingAvailable):
+            print(f"\tStage {numberOfTries + 1}:\n\ty{counter + 1}_model (1) = {noisedVariant}")
+
+        if(noisedVariant == previousVariant):
+            if(isPrintingAvailable):
+                print(f"\ty{counter + 1}_stage_{numberOfTries + 1} == y_previous -> relaxation, incorrect\n")
+            return False
+
+        if(noisedVariant != variant):
+            numberOfTries += 1
+            continue
+
+        if(isPrintingAvailable):
+            print(f"\ty{counter + 1}_stage_{numberOfTries + 1} == y_original -> relaxation, correct\n")
+
+        return True
+
+    if(isPrintingAvailable):
+        print(f"\ty{counter + 1}_stage_{numberOfTries + 1} != y_original -> incorrect\n")
+
     return False
+
+def hopfieldNetwork(variant, noisedVariant, variantWeight, method):
+    if(method == asyncMethod):
+        return asyncMethod(variant, noisedVariant, variantWeight)
+    elif(method == syncMethod):
+        return syncMethod(variant, noisedVariant, variantWeight)
+
+    return False
+
+def hopfieldResults(VECTORS):
+    global counter, isPrintingAvailable
+    INPUT_VALUES_HOPFIELD = [sublist[:] for sublist in VECTORS]
+
+    print(f"\nСеть Хопфилда:\n")
+    print(f"1. Source vectors:\n")
+
+    for i in range(len(INPUT_VALUES_HOPFIELD)):
+        print(f"\ty{i + 1} = {INPUT_VALUES_HOPFIELD[i]}")
+
+    WEIGHTS_HOPFIELD = initWeightsHopfield(INPUT_VALUES_HOPFIELD)
+    maxAsync = [0] * len(INPUT_VALUES_HOPFIELD)
+    maxSync = [0] * len(INPUT_VALUES_HOPFIELD)
+
+    print(f"\n2. Async method:\n")
+
+    counter = 0
+    isPrintingAvailable = True
+
+    for i in range(len(INPUT_VALUES_HOPFIELD)):
+        isPrintingAvailable = True
+        for j in range(len(INPUT_VALUES_HOPFIELD[i])):
+            noisedVariant = addNoise(INPUT_VALUES_HOPFIELD[i][:], j + 1)
+            if(hopfieldNetwork(INPUT_VALUES_HOPFIELD[i], noisedVariant, WEIGHTS_HOPFIELD, asyncMethod)):
+                if(maxAsync[i] < j + 1):
+                    maxAsync[i] = j + 1
+            isPrintingAvailable = False
+        counter += 1
+
+    print(f"3. Sync method:\n")
+
+    counter = 0
+    for i in range(len(INPUT_VALUES_HOPFIELD)):
+        isPrintingAvailable = True
+        for j in range(len(INPUT_VALUES_HOPFIELD[i])):
+            noisedVariant = addNoise(INPUT_VALUES_HOPFIELD[i][:], j + 1)
+            if(hopfieldNetwork(INPUT_VALUES_HOPFIELD[i], noisedVariant, WEIGHTS_HOPFIELD, syncMethod)):
+                if(maxSync[i] < j + 1):
+                    maxSync[i] = j + 1
+            isPrintingAvailable = False
+        counter += 1
+
+    print(f"4. Maximum number of recognised noisy bits:")
+    print(f"\tAsync:")
+
+    for i in range(len(maxAsync)):
+        print(f"\ty_{i + 1} = {maxAsync[i]}")
+
+    print(f"\tSync:")
+    for i in range(len(maxSync)):
+        print(f"\ty_{i + 1} = {maxSync[i]}")
 
 
 def main():
-    print("Сеть Хопфилда:")
+    global counter, isPrintingAvailable
 
-    print("\nSource vectors:")
-    for y_idx, y_original in enumerate(Y):
-        print(f"y{y_idx + 1} = {y_original}")
+    VECTORS_HOPFIELD = [
+        [0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0], # 1
+        [0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0], # 2
+        [1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1], # 8
+        [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]  # 11
+    ]
 
-    W = np.dot(np.matrix.transpose(Y * 2 - 1), (Y * 2 - 1)) - np.identity(Y1.size)
+    hopfieldResults(VECTORS_HOPFIELD)
 
-    y1_noisy = copy_noisy(Y1, 1)
+    return
 
-    print(f"\n\tAsync example for y1:")
-    async_method(y1_noisy, W, Y1)
-
-    print(f"\n\tSync example for y1:")
-    sync_method(y1_noisy, W, Y1)
-
-    # for y_idx, y_original in enumerate(Y):
-    #     y_noisy = copy_noisy(y_original, 1)
-    #
-    #     print(f"\n\tAsync y{y_idx + 1}:")
-    #     async_method(y_noisy, W, y_original)
-    #
-    #     print(f"\n\tSync y{y_idx + 1}:")
-    #     sync_method(y_noisy, W, y_original)
-
-if __name__ == '__main__':
+if __name__ =="__main__":
     main()
