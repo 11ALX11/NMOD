@@ -1,4 +1,6 @@
 import math
+from random import random
+
 import matplotlib.pyplot as plt
 
 # Вариант №2
@@ -10,10 +12,10 @@ import matplotlib.pyplot as plt
 INPUT_DATA_MIN_STEP = 0.10
 
 
-ALPHA = 0.007       # шаг обучения 0 < a < 1
+ALPHA = 0.01       # шаг обучения 0 < a < 1
 E_OPTIMAL = 1e-4    # минимальная среднеквадратичная ошибка НС
 
-NN_WIDTH = 5        # количество входных образов (Кол-во входов ИНС)
+NN_WIDTH = 10        # количество входных образов (Кол-во входов ИНС)
 # n = NN_WIDTH and = m; so  n x m x 1
 
 #   Количество значений функции; для обучения и тестирования
@@ -158,9 +160,9 @@ def mutate_weights(y, e, in_values: list):
 def init_weights():
     i = 0
     while i < NN_WIDTH:
-        theta1.append(0.1)
-        weights2.append(0.1)
-        weights3.append(0.1)
+        theta1.append(random())
+        weights2.append(random())
+        weights3.append(random())
 
         p.append(0.)
         last_p.append(0.)
@@ -183,8 +185,14 @@ def train():
         print(f"\nGeneration №{generation_counter}")
         error_current = 0.
         train_loss = 0
+
         global last_y
         last_y = 0
+        i = 0
+        while i < NN_WIDTH:
+            p[i] = 0.
+            last_p[i] = 0.
+            i += 1
 
         NN_data_predictions = []
         i = LEARN_DATA_AMOUNT - NN_WIDTH
@@ -227,7 +235,7 @@ def train():
         last_test_loss = error_current
         generation_counter += 1
 
-        if generation_counter > 1360:
+        if generation_counter > 10000:
             break
 
 
@@ -236,8 +244,15 @@ def print_stage5():
     print("\nStage 5: print full model outputs for best epoch\n")
 
     NN_data_predictions = []
+
     global last_y
     last_y = 0
+    i = 0
+    while i < NN_WIDTH:
+        p[i] = 0.
+        last_p[i] = 0.
+        i += 1
+
     i = LEARN_DATA_AMOUNT - NN_WIDTH
     while i < LEARN_DATA_AMOUNT:
         NN_data_predictions.append(data_values[i])
@@ -264,14 +279,20 @@ def plot_func():
     plt.subplot(211)
     plt.plot(input_values, data_values)
 
+    global last_y
+    last_y = 0
+    i = 0
+    while i < NN_WIDTH:
+        p[i] = 0.
+        last_p[i] = 0.
+        i += 1
+
     NN_data_predictions = []
     i = 0
     while i < NN_WIDTH:
         NN_data_predictions.append(data_values[i])
         i += 1
 
-    global last_y
-    last_y = 0
     while i < DATA_AMOUNT:
         in_value = NN_data_predictions[-NN_WIDTH:]  # последние NN_WIDTH значений
         y = get_y_NN(in_value)
