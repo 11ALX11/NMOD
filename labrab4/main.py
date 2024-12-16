@@ -1,4 +1,5 @@
 import math
+import numpy as np
 from random import random
 
 import matplotlib.pyplot as plt
@@ -15,7 +16,7 @@ INPUT_DATA_MIN_STEP = 0.10
 ALPHA = 0.01       # шаг обучения 0 < a < 1
 E_OPTIMAL = 1e-4    # минимальная среднеквадратичная ошибка НС
 
-NN_WIDTH = 10        # количество входных образов (Кол-во входов ИНС)
+NN_WIDTH = 8        # количество входных образов (Кол-во входов ИНС)
 # n = NN_WIDTH and = m; so  n x m x 1
 
 #   Количество значений функции; для обучения и тестирования
@@ -26,11 +27,11 @@ DATA_AMOUNT          = LEARN_DATA_AMOUNT + TEST_DATA_AMOUNT     # = 90 - кол-
 input_values    = []    # x's (иксы)
 data_values     = []    # y's (игрики)
 
-weights1        = [[0.1] * NN_WIDTH for i in range(NN_WIDTH)]
+weights1        = [[random()/2 - 0.25] * NN_WIDTH for i in range(NN_WIDTH)]
                         # w входной -> промежуточный
 theta1          = []    # порог
 weights2        = []    # v промежуточный -> выходной
-theta2          = 0     # порог
+theta2          = random() - 0.5     # порог
 weights3        = []    # контекстный -> промежуточный
 last_y          = 0     # y(t-1)
 p               = []
@@ -137,8 +138,8 @@ def mutate_weights(y, e, in_values: list):
 
         fs = 1 - p[i] ** 2
 
-        weights2[i]         = weights2[i]    - ALPHA * (y - e) * p[i]
         gamma = (y - e) * weights2[i]
+        weights2[i]         = weights2[i]    - ALPHA * (y - e) * p[i]
 
         weights3[i]         = weights3[i]    - ALPHA * gamma * fs * last_p[i]
         theta1[i]           = theta1[i]      + ALPHA * gamma * fs
@@ -160,9 +161,9 @@ def mutate_weights(y, e, in_values: list):
 def init_weights():
     i = 0
     while i < NN_WIDTH:
-        theta1.append(random())
-        weights2.append(random())
-        weights3.append(random())
+        theta1.append(random() - 0.5)
+        weights2.append(random() - 0.5)
+        weights3.append(random() - 0.5)
 
         p.append(0.)
         last_p.append(0.)
@@ -235,7 +236,7 @@ def train():
         last_test_loss = error_current
         generation_counter += 1
 
-        if generation_counter > 10000:
+        if generation_counter > 2000:
             break
 
 
