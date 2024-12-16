@@ -2,16 +2,13 @@
 # | n   |	m	| № векторов |
 # | --- | ----- | ---------- |
 # | 11  |	4	| 1,8,2,11   |
+import random
 
 # | №  | Данные вектора                                                                |
 # | 1  | 0 | 1 | 0 | 0 | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 1 | 0 | 1 | 0 | 1 | 0 | 0 | 0 |
 # | 2  | 0 | 0 | 0 | 0 | 1 | 1 | 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 | 1 | 1 | 0 | 0 | 0 | 0 |
 # | 8  | 1 | 1 | 1 | 0 | 0 | 0 | 1 | 1 | 1 | 0 | 0 | 0 | 1 | 1 | 1 | 0 | 0 | 0 | 1 | 1 |
 # | 11 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 |
-
-#Hopfield Utils
-asyncMethod = 1
-syncMethod = 2
 
 #Matrix Utils
 add = 1
@@ -94,8 +91,13 @@ def transposeMatrix(matrixA):
     return matrix
 
 def addNoise(noisedVariant, bit):
-    for i in range(bit):
+    length = len(noisedVariant)
+    # Случайно выбираем уникальные индексы для зашумления
+    indices_to_flip = random.sample(range(length), min(bit, length))
+
+    for i in indices_to_flip:
         noisedVariant[i] = 1 if noisedVariant[i] == 0 else 0
+
     return noisedVariant
 
 
@@ -192,7 +194,8 @@ def main():
         [0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0], # 1
         [0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0], # 2
         [1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1], # 8
-        [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]  # 11
+        # [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]  # 11
+        [0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0]
     ]
 
     hammingNetworkResults(VECTORS_HAMMINGTON)
