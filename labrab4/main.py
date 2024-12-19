@@ -43,6 +43,7 @@ last_p          = []    # p[i](t-1)
 
 error_current   = E_OPTIMAL + 1     # текущая ошибка НС
 
+NN_data_predictions = []
 
 
 def clamp(n, smallest, largest): return max(smallest, min(n, largest))
@@ -208,10 +209,16 @@ def train():
             last_p[i] = 0.
             i += 1
 
+        global NN_data_predictions
         NN_data_predictions = []
-        i = LEARN_DATA_AMOUNT - NN_WIDTH
-        while i < LEARN_DATA_AMOUNT:
-            NN_data_predictions.append(data_values[i])
+        # i = LEARN_DATA_AMOUNT - NN_WIDTH
+        # while i < LEARN_DATA_AMOUNT:
+        #     NN_data_predictions.append(data_values[i])
+        #     i += 1
+        i = 0
+        while i < NN_WIDTH:
+            #append first NN_WIDTH
+            NN_data_predictions.append((data_values[i]))
             i += 1
 
         i = 0
@@ -230,13 +237,15 @@ def train():
                 #in_value = NN_data_predictions[-NN_WIDTH:]  # последние NN_WIDTH значений
                 mutate_weights(y, expected_value, in_value)
                 y = get_y_NN(in_value)
-                #NN_data_predictions.append(y)
+            # remember y's for plot
+            NN_data_predictions.append(y)
 
             error = get_error(y, expected_value)
             error_current += error
 
             if i + NN_WIDTH + 1 == LEARN_DATA_AMOUNT:
                 train_loss = error_current
+                error_current = 0 # train and test separate
 
             i += 1
 
@@ -295,25 +304,25 @@ def plot_func():
     plt.subplot(211)
     plt.plot(input_values, data_values)
 
-    global last_y
-    last_y = 0
-    i = 0
-    while i < NN_WIDTH:
-        p[i] = 0.
-        last_p[i] = 0.
-        i += 1
-
-    NN_data_predictions = []
-    i = 0
-    while i < NN_WIDTH:
-        NN_data_predictions.append(data_values[i])
-        i += 1
-
-    while i < DATA_AMOUNT:
-        in_value = NN_data_predictions[-NN_WIDTH:]  # последние NN_WIDTH значений
-        y = get_y_NN(in_value)
-        NN_data_predictions.append(y)
-        i += 1
+    # global last_y
+    # last_y = 0
+    # i = 0
+    # while i < NN_WIDTH:
+    #     p[i] = 0.
+    #     last_p[i] = 0.
+    #     i += 1
+    #
+    # NN_data_predictions = []
+    # i = 0
+    # while i < NN_WIDTH:
+    #     NN_data_predictions.append(data_values[i])
+    #     i += 1
+    #
+    # while i < DATA_AMOUNT:
+    #     in_value = NN_data_predictions[-NN_WIDTH:]  # последние NN_WIDTH значений
+    #     y = get_y_NN(in_value)
+    #     NN_data_predictions.append(y)
+    #     i += 1
 
     plt.subplot(212)
     plt.plot(input_values, NN_data_predictions)
