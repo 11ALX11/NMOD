@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from albumentations import Compose, RandomCrop, HorizontalFlip, Resize
+from albumentations import Compose, HorizontalFlip, Resize, CenterCrop
 import time
 import os
 import copy
@@ -19,7 +19,7 @@ input_size = 784  # 28x28 изображения
 hidden_size = 800
 output_size = 10
 
-max_epochs = 100 # Не хотите убиться при первом запуске - поставьте штук 201
+max_epochs = 130 # Не хотите убиться при первом запуске - поставьте штук 201
 fine_tuning_epochs = 5  # Дополнительные эпохи для fine-tuning
 
 
@@ -141,7 +141,7 @@ y_test = load_mnist_labels(test_labels_path)
 # Преобразования данных с использованием albumentations
 #(ПО ВАРИАНТУ, p - это вероятность срабатывания, выставить 1.0, чтобы срабатывало всегда)
 transform = Compose([
-    RandomCrop(height=21, width=21, p=0.9),
+    CenterCrop(height=21, width=21, p=0.9),
     HorizontalFlip(p=0.9),
     Resize(height=28, width=28) # Для Crop
 ])
